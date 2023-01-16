@@ -1,0 +1,216 @@
+---
+- hosts: server
+  name: config python app
+  become: true
+  vars_files: defaults/main.yml
+  gather_facts: false
+  tasks: 
+    - name: Create bfg group
+      group:
+        name: bfg
+        state: present
+
+    - name: Create user bfg
+      user:
+        name: bfg
+        group: bfg
+        shell: /bin/bash
+        password: '123'
+    
+    - name: Get python app from git
+      git:
+        repo: https://github.com/bfg-group/stack_over_search.git
+        dest: /home/bfg/stack_over_search
+      ignore_errors: true
+     
+    - name: install packages
+      apt: 
+        name: 
+          - mysql-server
+          - mysql-client
+          - python3-mysqldb
+          - redis-server
+          - python3-dev 
+          - default-libmysqlclient-dev 
+          - build-essential
+          - python3-pip
+          - nginx
+          - python3-venv
+        update_cache: yes
+        state: present
+
+    - name: Install via pip
+      ansible.builtin.pip:
+        name: 
+          - mysqlclient
+          - PyMySQL
+          - virtualenv
+    
+    - name: start and enable redis 
+      service:
+        name: redis
+        enabled: true
+        state: started
+
+    - name: start and enable mysql
+      service:
+        name: mysql
+        enabled: true
+        state: started
+    
+    - name: update mysql root password for root account
+      mysql_user:
+        name: root
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+        host: 'localhost'
+        password: '12345'
+        priv: "*.*:ALL,GRANT"
+        check_implicit_admin: true
+
+    - name: Save root password in .my.cnf
+      template:
+        src: templates/root_cnf.j2
+        dest: /root/.my.cnf
+        owner: root
+        mode: '0600'
+      notify: restart mysql-server
+    
+    - name: Create /etc/stackoversearch directory
+      file:
+        path: /etc/stackoversearch
+        state: directory
+
+    - name: Create /var/log/stackoversearch directory
+      file:
+        path: /var/log/stackoversearch
+        state: directory
+
+    - name: Template settings.ini copy
+      template:
+        src: templates/settings.ini.j2
+        dest: /etc/stackoversearch/stack_settings.ini
+        owner: root
+        mode: '0600'
+      notify: restart mysql-server
+
+    - name: Create database stack_exchange
+      mysql_db:
+        name: "stack_exchange"
+        state: present
+  
+    - name: Restore tables from tables.sql
+      community.mysql.mysql_db:
+        name: stack_exchange
+        state: import
+        target: /home/bfg/stack_over_search/tables.sql
+      ignore_errors: true
+
+    - name: Change owner for stack_over_search folder
+      file:
+        path: /home/bfg/stack_over_search
+        state: directory
+        recurse: yes
+        owner: bfg
+        group: bfg
+
+    - name: Create Python3-virtual environment folder
+      file:
+          name: /home/bfg/stack_over_search/virtualenv
+          state: directory
+          owner: bfg
+          group: bfg
+          mode: '0644'
+    
+    - name: Initiate virtualenv
+      pip:
+        virtualenv: /home/bfg/stack_over_search/virtualenv
+        umask: "0022"
+        virtualenv_python: python3.6
+        requirements: /home/bfg/stack_over_search/requirements.txt
+
+    - name: Install gunicorn to virtualenv
+      pip:
+        name: gunicorn
+        virtualenv: /home/bfg/stack_over_search/virtualenv
+        umask: "0022"
+
+    - name: Copy nginx config
+      template:
+        src: templates/nginx.conf.j2
+        dest: /etc/nginx/nginx.conf
+      notify: restart nginx
+
+    - name: Copy gunicorn test_app supervisor
+      template:
+        src: templates/gunicorn_tst.service.j2
+        dest: /etc/systemd/system/gunicorn_tst.service
+      notify: start test_app systemd
+      when: test_app == true
+    
+    - name: Get test_app from git
+      git:
+        repo: https://github.com/ChurikovAnatolii/tst_app.git
+        dest: /home/vagrant/tst
+      when: test_app == true
+
+    - name: Create venv folder in tst
+      file:
+          name: /home/vagrant/tst/venv
+          state: directory
+          owner: vagrant
+          group: vagrant
+          mode: '0644'
+      when: test_app == true
+
+    - name: Initiate venv in tst
+      command: python3 -m venv /home/vagrant/tst/venv
+      when: test_app == true
+
+    - name: Install gunicorn to virtualenv in tst
+      pip:
+        name: gunicorn
+        virtualenv: /home/vagrant/tst/venv
+        umask: "0022"
+      when: test_app == true
+
+    - name: Install aiohttp to virtualenv in tst
+      pip:
+        name: aiohttp
+        virtualenv: /home/vagrant/tst/venv
+        umask: "0022"
+      when: test_app == true
+
+    - name: Change owner for stack_over_search folder
+      file:
+        path: /home/vagrant/tst
+        state: directory
+        recurse: yes
+        owner: vagrant
+        group: vagrant
+      when: test_app == true
+    
+  handlers:
+    - name: restart mysql-server
+      service:  
+        name: mysql
+        state: restarted
+    
+    - name: restart nginx
+      service:  
+        name: nginx
+        state: restarted
+        enabled: yes
+
+    - name: start test_app systemd
+      service:  
+        name: gunicorn_tst.service
+        state: restarted
+        enabled: yes
+
+
+
+
+
+    
+
+  

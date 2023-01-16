@@ -1,0 +1,14 @@
+[Unit]
+Description = Test app gunicorn daemon
+After = network.target
+
+[Service]
+PermissionsStartOnly = true
+User = vagrant
+Group = vagrant
+WorkingDirectory = /home/vagrant/tst
+ExecStart = /bin/bash -c 'cd ~/tst && source venv/bin/activate && gunicorn my_app_module:my_web_app --bind localhost:8080 --workers 4 --worker-class aiohttp.GunicornWebWorker'
+PrivateTmp = true
+
+[Install]
+WantedBy = multi-user.target
