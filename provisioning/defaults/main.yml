@@ -1,1 +1,10 @@
 test_app: true
+
+python_from_source: true
+python_source_url: https://www.python.org/ftp/python/3.7.15/Python-3.7.15.tgz
+python_version_name: Python-3.7.15
+python_dir: /home/bfg/.python
+
+db_user: root
+db_password: 12345
+db_name: stack_exchange

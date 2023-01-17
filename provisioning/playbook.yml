@@ -23,7 +23,7 @@
         dest: /home/bfg/stack_over_search
       ignore_errors: true
      
-    - name: install packages
+    - name: Install packages
       apt: 
         name: 
           - mysql-server
@@ -46,18 +46,55 @@
           - PyMySQL
           - virtualenv
     
-    - name: start and enable redis 
+    - name: Start and enable redis 
       service:
         name: redis
         enabled: true
         state: started
 
-    - name: start and enable mysql
+    - name: Start and enable mysql
       service:
         name: mysql
         enabled: true
         state: started
     
+    - name: Copy nginx config
+      template:
+        src: templates/nginx.conf.j2
+        dest: /etc/nginx/nginx.conf
+      notify: restart nginx
+
+    # Python build tasks (will work only if var in defaults - python_from_source is true)
+    - name: Create python directory
+      file:
+        path: "{{ python_dir }}"
+        state: directory
+    
+    - name: Create python tmp directory
+      file:
+        path: '{{ python_dir }}/tmp'
+        state: directory
+    
+    - name: Copy python source to tmp folder
+      get_url:
+        url: "{{ python_source_url }}" 
+        dest: "{{ python_dir }}/tmp"
+    
+    - name: untar python source file
+      shell: cd "{{ python_dir }}/tmp" && tar -xzf "{{ python_version_name }}.tgz"
+    
+    - name: Build python from source
+      shell: "{{ item }}"
+      args:
+        chdir: "{{ python_dir }}/tmp/{{ python_version_name }}"
+      with_items:
+        - ./configure --enable-optimizations --prefix={{ python_dir }} 
+        - make -j 2
+        - make install
+        - rm -rf "{{ python_dir }}/tmp"
+      when: python_from_source == true
+    
+    # Database configure tasks
     - name: update mysql root password for root account
       mysql_user:
         name: root
@@ -67,6 +104,18 @@
         priv: "*.*:ALL,GRANT"
         check_implicit_admin: true
 
+    - name: Create database stack_exchange
+      mysql_db:
+        name: "stack_exchange"
+        state: present
+  
+    - name: Restore tables from tables.sql
+      community.mysql.mysql_db:
+        name: stack_exchange
+        state: import
+        target: /home/bfg/stack_over_search/tables.sql
+      ignore_errors: true
+
     - name: Save root password in .my.cnf
       template:
         src: templates/root_cnf.j2
@@ -74,7 +123,8 @@
         owner: root
         mode: '0600'
       notify: restart mysql-server
-    
+
+    # Stackoversearch config tasks
     - name: Create /etc/stackoversearch directory
       file:
         path: /etc/stackoversearch
@@ -93,18 +143,6 @@
         mode: '0600'
       notify: restart mysql-server
 
-    - name: Create database stack_exchange
-      mysql_db:
-        name: "stack_exchange"
-        state: present
-  
-    - name: Restore tables from tables.sql
-      community.mysql.mysql_db:
-        name: stack_exchange
-        state: import
-        target: /home/bfg/stack_over_search/tables.sql
-      ignore_errors: true
-
     - name: Change owner for stack_over_search folder
       file:
         path: /home/bfg/stack_over_search
@@ -112,34 +150,14 @@
         recurse: yes
         owner: bfg
         group: bfg
-
-    - name: Create Python3-virtual environment folder
-      file:
-          name: /home/bfg/stack_over_search/virtualenv
-          state: directory
-          owner: bfg
-          group: bfg
-          mode: '0644'
     
     - name: Initiate virtualenv
       pip:
-        virtualenv: /home/bfg/stack_over_search/virtualenv
-        umask: "0022"
-        virtualenv_python: python3.6
         requirements: /home/bfg/stack_over_search/requirements.txt
-
-    - name: Install gunicorn to virtualenv
-      pip:
-        name: gunicorn
         virtualenv: /home/bfg/stack_over_search/virtualenv
-        umask: "0022"
-
-    - name: Copy nginx config
-      template:
-        src: templates/nginx.conf.j2
-        dest: /etc/nginx/nginx.conf
-      notify: restart nginx
-
+        virtualenv_python: python3.6
+    
+    # Test gunicorn app configure tasks
     - name: Copy gunicorn test_app supervisor
       template:
         src: templates/gunicorn_tst.service.j2
@@ -153,34 +171,14 @@
         dest: /home/vagrant/tst
       when: test_app == true
 
-    - name: Create venv folder in tst
-      file:
-          name: /home/vagrant/tst/venv
-          state: directory
-          owner: vagrant
-          group: vagrant
-          mode: '0644'
-      when: test_app == true
-
     - name: Initiate venv in tst
-      command: python3 -m venv /home/vagrant/tst/venv
-      when: test_app == true
-
-    - name: Install gunicorn to virtualenv in tst
-      pip:
-        name: gunicorn
+      pip: 
+        requirements: /home/vagrant/tst/requirements.txt
         virtualenv: /home/vagrant/tst/venv
-        umask: "0022"
+        virtualenv_python: python3.6
       when: test_app == true
 
-    - name: Install aiohttp to virtualenv in tst
-      pip:
-        name: aiohttp
-        virtualenv: /home/vagrant/tst/venv
-        umask: "0022"
-      when: test_app == true
-
-    - name: Change owner for stack_over_search folder
+    - name: Change owner for tst folder
       file:
         path: /home/vagrant/tst
         state: directory
@@ -188,7 +186,7 @@
         owner: vagrant
         group: vagrant
       when: test_app == true
-    
+  
   handlers:
     - name: restart mysql-server
       service:  
@@ -206,11 +204,3 @@
         name: gunicorn_tst.service
         state: restarted
         enabled: yes
-
-
-
-
-
-    
-
-  

@@ -1,0 +1,14 @@
+[Unit]
+Description = guniron daemon for stackoversearch
+After = network.target
+
+[Service]
+PermissionsStartOnly = true
+User = bfg
+Group = bfg
+WorkingDirectory = /home/bfg/stack_over_search
+ExecStart = /bin/bash -c 'cd /home/bfg/stack_over_search/stackoversearch && source ~/stack_over_search/virtualenv/bin/activate && gunicorn stack:my_web_app --bind localhost:8080 --workers 4 --worker-class aiohttp.GunicornWebWorker'
+PrivateTmp = true
+
+[Install]
+WantedBy = multi-user.target
