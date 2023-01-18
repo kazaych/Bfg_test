@@ -139,8 +139,8 @@
       template:
         src: templates/settings.ini.j2
         dest: /etc/stackoversearch/stack_settings.ini
-        owner: root
-        mode: '0600'
+        owner: bfg
+        mode: '0644'
       notify: restart mysql-server
 
     - name: Initiate virtualenv
@@ -152,6 +152,14 @@
     - name: Change owner for stack_over_search folder
       file:
         path: /home/bfg/stack_over_search
+        state: directory
+        recurse: yes
+        owner: bfg
+        group: bfg
+    
+    - name: Change owner for stack_over_search folder
+      file:
+        path: /var/log/stackoversearch
         state: directory
         recurse: yes
         owner: bfg
@@ -182,7 +190,7 @@
       pip: 
         requirements: /home/vagrant/tst/requirements.txt
         virtualenv: /home/vagrant/tst/venv
-        virtualenv_python: python3.6
+        virtualenv_python: "{{ python_dir }}/bin/python3.6"
       when: test_app == true
 
     - name: Change owner for tst folder
