@@ -91,7 +91,6 @@
         - ./configure --enable-optimizations --prefix={{ python_dir }} 
         - make -j 2
         - make install
-        - rm -rf "{{ python_dir }}/tmp"
       when: python_from_source == true
     
     # Database configure tasks
@@ -103,6 +102,15 @@
         password: '12345'
         priv: "*.*:ALL,GRANT"
         check_implicit_admin: true
+      ignore_errors: true
+    
+    - name: Save root password in .my.cnf
+      template:
+        src: templates/root_cnf.j2
+        dest: /root/.my.cnf
+        owner: root
+        mode: '0600'
+      notify: restart mysql-server
 
     - name: Create database stack_exchange
       mysql_db:
@@ -115,14 +123,6 @@
         state: import
         target: /home/bfg/stack_over_search/tables.sql
       ignore_errors: true
-
-    - name: Save root password in .my.cnf
-      template:
-        src: templates/root_cnf.j2
-        dest: /root/.my.cnf
-        owner: root
-        mode: '0600'
-      notify: restart mysql-server
 
     # Stackoversearch config tasks
     - name: Create /etc/stackoversearch directory
@@ -143,6 +143,12 @@
         mode: '0600'
       notify: restart mysql-server
 
+    - name: Initiate virtualenv
+      pip:
+        requirements: /home/bfg/stack_over_search/requirements.txt
+        virtualenv: /home/bfg/stack_over_search/virtualenv
+        virtualenv_python: "{{ python_dir }}/bin/python3.6"
+    
     - name: Change owner for stack_over_search folder
       file:
         path: /home/bfg/stack_over_search
@@ -150,12 +156,6 @@
         recurse: yes
         owner: bfg
         group: bfg
-    
-    - name: Initiate virtualenv
-      pip:
-        requirements: /home/bfg/stack_over_search/requirements.txt
-        virtualenv: /home/bfg/stack_over_search/virtualenv
-        virtualenv_python: "{{ python_dir }}/bin/python3.6"
     
     - name: Copy gunicorn stack supervisor and start
       template:
