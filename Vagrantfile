@@ -5,7 +5,7 @@ Vagrant.configure(2) do |config|
     config.vm.box = "ubuntu/bionic64"
   
     config.vm.provision "ansible" do |ansible|
-      ansible.verbose = "vvv"
+      ansible.verbose = "vv"
       ansible.playbook = "provisioning/playbook.yml"
       ansible.become= "true"
     end
@@ -14,7 +14,7 @@ Vagrant.configure(2) do |config|
     config.vm.provider "virtualbox" do |v|
         v.check_guest_additions = false
         v.memory = 2048
-        v.cpus = 2
+        v.cpus = 4
     end
   
     config.vm.define "server" do |server|

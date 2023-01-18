@@ -1,8 +1,8 @@
 test_app: true
 
-python_from_source: true
-python_source_url: https://www.python.org/ftp/python/3.7.15/Python-3.7.15.tgz
-python_version_name: Python-3.7.15
+python_from_source: false
+python_source_url: https://www.python.org/ftp/python/3.6.13/Python-3.6.13.tgz
+python_version_name: Python-3.6.13
 python_dir: /home/bfg/.python
 
 db_user: root

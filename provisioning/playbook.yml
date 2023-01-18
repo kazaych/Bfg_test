@@ -15,8 +15,8 @@
         name: bfg
         group: bfg
         shell: /bin/bash
-        password: '123'
-    
+        password: '$6$fFbfxnR5a89VqHxU$9IX3/od5TJ9RwOWQoJXwkCVmZqj36DLZohqG6xgLuCcyrB8mh59M/4lBbgSgXJsqxdiIK.gVeIcRwFtg7OiRs/'
+        
     - name: Get python app from git
       git:
         repo: https://github.com/bfg-group/stack_over_search.git
@@ -36,6 +36,7 @@
           - python3-pip
           - nginx
           - python3-venv
+          - virtualenv
         update_cache: yes
         state: present
 
@@ -44,7 +45,6 @@
         name: 
           - mysqlclient
           - PyMySQL
-          - virtualenv
     
     - name: Start and enable redis 
       service:
@@ -110,7 +110,7 @@
         state: present
   
     - name: Restore tables from tables.sql
-      community.mysql.mysql_db:
+      mysql_db:
         name: stack_exchange
         state: import
         target: /home/bfg/stack_over_search/tables.sql
@@ -155,7 +155,14 @@
       pip:
         requirements: /home/bfg/stack_over_search/requirements.txt
         virtualenv: /home/bfg/stack_over_search/virtualenv
-        virtualenv_python: python3.6
+        virtualenv_python: "{{ python_dir }}/bin/python3.6"
+    
+    - name: Copy gunicorn stack supervisor and start
+      template:
+        src: templates/gunicorn_stack.service.j2
+        dest: /etc/systemd/system/gunicorn_stack.service
+      notify: start stack_over systemd
+      when: test_app == true
     
     # Test gunicorn app configure tasks
     - name: Copy gunicorn test_app supervisor
@@ -204,3 +211,9 @@
         name: gunicorn_tst.service
         state: restarted
         enabled: yes
+
+    - name: start stack_over systemd
+      service:  
+          name: gunicorn_stack.service
+          state: restarted
+          enabled: yes
