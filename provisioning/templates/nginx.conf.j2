@@ -12,8 +12,13 @@ http {
         client_max_body_size  200M;
 
         ## Main site location.
+        
         location / {
+            {% if test_app == true %}
             proxy_pass                          http://127.0.0.1:8080;
+            {% elif %}
+            proxy_pass                          http://127.0.0.1:8081;
+            {% endif %}
             proxy_set_header                    Host $host;
             proxy_set_header X-Forwarded-Host   $server_name;
             proxy_set_header X-Real-IP          $remote_addr;

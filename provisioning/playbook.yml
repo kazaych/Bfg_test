@@ -141,13 +141,34 @@
         dest: /etc/stackoversearch/stack_settings.ini
         owner: bfg
         mode: '0644'
-      notify: restart mysql-server
+      
+    - name: copy wsgi.py
+      copy:
+        src: templates/wsgi.py
+        dest: /home/bfg/stack_over_search/stackoversearch
+        owner: bfg
+        mode: '0644'
+      
 
-    - name: Initiate virtualenv
+    - name: Initiate virtualenv stack with source
       pip:
         requirements: /home/bfg/stack_over_search/requirements.txt
         virtualenv: /home/bfg/stack_over_search/virtualenv
         virtualenv_python: "{{ python_dir }}/bin/python3.6"
+      when: python_from_source == true
+    
+    - name: Initiate virtualenv stack
+      pip:
+        requirements: /home/bfg/stack_over_search/requirements.txt
+        virtualenv: /home/bfg/stack_over_search/virtualenv
+        virtualenv_python: python3.6
+      when: python_from_source == false
+
+    - name: Install gunicorn to venv
+      pip:
+        name: gunicorn
+        virtualenv: /home/bfg/stack_over_search/virtualenv
+      when: python_from_source == false
     
     - name: Change owner for stack_over_search folder
       file:
@@ -157,7 +178,7 @@
         owner: bfg
         group: bfg
     
-    - name: Change owner for stack_over_search folder
+    - name: Change owner for /var/log/stack_over_search folder
       file:
         path: /var/log/stackoversearch
         state: directory
@@ -191,7 +212,14 @@
         requirements: /home/vagrant/tst/requirements.txt
         virtualenv: /home/vagrant/tst/venv
         virtualenv_python: "{{ python_dir }}/bin/python3.6"
-      when: test_app == true
+      when: test_app == true and python_from_source == true
+    
+    - name: Initiate venv in tst
+      pip: 
+        requirements: /home/vagrant/tst/requirements.txt
+        virtualenv: /home/vagrant/tst/venv
+        virtualenv_python: python3.6
+      when: test_app == true and python_from_source == false
 
     - name: Change owner for tst folder
       file:

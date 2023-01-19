@@ -7,7 +7,7 @@ PermissionsStartOnly = true
 User = bfg
 Group = bfg
 WorkingDirectory = /home/bfg/stack_over_search
-ExecStart = /bin/bash -c 'cd ~/stack_over_search/stackoversearch && source ~/stack_over_search/virtualenv/bin/activate && gunicorn stack:my_web_app --bind localhost:8080 --workers 4 --worker-class aiohttp.GunicornWebWorker'
+ExecStart = /bin/bash -c 'cd ~/stack_over_search/stackoversearch && source ~/stack_over_search/virtualenv/bin/activate && gunicorn stack_oversearch:wsgi --bind localhost:8081 --workers 4 
 PrivateTmp = true
 
 [Install]
