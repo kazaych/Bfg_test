@@ -192,6 +192,7 @@
         dest: /etc/systemd/system/gunicorn_stack.service
       notify: start stack_over systemd
       when: test_app == true
+      ignore_errors: true
     
     # Test gunicorn app configure tasks
     - name: Copy gunicorn test_app supervisor
