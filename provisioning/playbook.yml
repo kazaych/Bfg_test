@@ -191,7 +191,7 @@
         src: templates/gunicorn_stack.service.j2
         dest: /etc/systemd/system/gunicorn_stack.service
       notify: start stack_over systemd
-      when: test_app == true
+      when: test_app == false
       ignore_errors: true
     
     # Test gunicorn app configure tasks
