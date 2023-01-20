@@ -1,4 +1,4 @@
-test_app: false
+test_app: true
 
 python_from_source: true
 python_source_url: https://www.python.org/ftp/python/3.6.13/Python-3.6.13.tgz

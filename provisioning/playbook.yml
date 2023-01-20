@@ -149,7 +149,6 @@
         owner: bfg
         mode: '0644'
       
-
     - name: Initiate virtualenv stack with source
       pip:
         requirements: /home/bfg/stack_over_search/requirements.txt
@@ -194,7 +193,7 @@
       when: test_app == false
       ignore_errors: true
     
-    # Test gunicorn app configure tasks
+    # Test gunicorn test_app app configure tasks
     - name: Copy gunicorn test_app supervisor
       template:
         src: templates/gunicorn_tst.service.j2
